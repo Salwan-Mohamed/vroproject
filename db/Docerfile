@@ -1,0 +1,15 @@
+FROM mariadb:10.5
+
+LABEL maintainer="salwansaied"
+
+ENV MYSQL_ROOT_PASSWORD=admin123
+ENV MYSQL_DATABASE=accounts
+ENV MYSQL_USER=admin
+ENV MYSQL_PASSWORD=admin123
+
+COPY db_backup.sql /docker-entrypoint-initdb.d/
+
+EXPOSE 3306
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
+  CMD mysqladmin ping -uroot -p${MYSQL_ROOT_PASSWORD} || exit 1
