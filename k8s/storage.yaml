@@ -3,13 +3,13 @@ kind: StorageClass
 metadata:
   name: openebs-sc
   namespace: vproproject
-annotations:
-  openebs.io/cas-type: local
-  cas.openebs.io/config: |
-    - name: StorageType
-      value: "hostpath"
-    - name: BasePath
-      value: "/var/openebs/local"
+  annotations:
+    openebs.io/cas-type: local
+    cas.openebs.io/config: |
+      - name: StorageType
+        value: "hostpath"
+      - name: BasePath
+        value: "/var/openebs/local"
 provisioner: openebs.io/local
 volumeBindingMode: WaitForFirstConsumer
 reclaimPolicy: Delete
@@ -17,7 +17,7 @@ reclaimPolicy: Delete
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: vprodb-pvc
+  name: mysql-pvc
   namespace: vproproject
 spec:
   storageClassName: openebs-sc
@@ -30,7 +30,7 @@ spec:
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: vpromq-pvc
+  name: rabbitmq-pvc
   namespace: vproproject
 spec:
   storageClassName: openebs-sc
