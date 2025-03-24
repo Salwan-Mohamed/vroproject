@@ -29,15 +29,15 @@ spec:
         livenessProbe:
           tcpSocket:
             port: 11211
-          initialDelaySeconds: 10
+          initialDelaySeconds: 30
           periodSeconds: 10
-          timeoutSeconds: 2
+          timeoutSeconds: 5
         readinessProbe:
           tcpSocket:
             port: 11211
-          initialDelaySeconds: 5
+          initialDelaySeconds: 15
           periodSeconds: 5
-          timeoutSeconds: 2
+          timeoutSeconds: 3
       initContainers:
       - name: init-memcached
         image: busybox:1.35
