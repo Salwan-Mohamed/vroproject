@@ -7,7 +7,7 @@ data:
   application.properties: |
     #JDBC Configutation for Database Connection
     jdbc.driverClassName=com.mysql.jdbc.Driver
-    jdbc.url=jdbc:mysql://vprodb-service:3306/accounts?useUnicode=true&characterEncoding=UTF-8&zeroDateTimeBehavior=convertToNull
+    jdbc.url=jdbc:mysql://mysql-db-service:3306/accounts?useUnicode=true&characterEncoding=UTF-8&zeroDateTimeBehavior=convertToNull
     jdbc.username=${DB_USER}
     jdbc.password=${DB_PASSWORD}
 
@@ -20,13 +20,13 @@ data:
     memcached.standBy.port=11211
 
     #RabbitMQ Configuration
-    rabbitmq.address=vpromq-service
+    rabbitmq.address=rabbitmq-service
     rabbitmq.port=5672
     rabbitmq.username=${RABBITMQ_USER}
     rabbitmq.password=${RABBITMQ_PASSWORD}
 
     #Elasticesearch Configuration
-    elasticsearch.host=vprosearch-service
+    elasticsearch.host=elasticsearch-service
     elasticsearch.port=9300
     elasticsearch.cluster=vprofile
     elasticsearch.node=vprofilenode
