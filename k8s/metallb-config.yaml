@@ -1,0 +1,28 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  namespace: metallb-system
+  name: config
+data:
+  config: |
+    address-pools:
+    - name: default
+      protocol: layer2
+      addresses:
+      - 10.1.5.81-10.1.5.199
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: vproweb-lb
+  namespace: vproproject
+  annotations:
+    metallb.universe.tf/loadBalancerIPs: "10.1.5.100"
+spec:
+  selector:
+    app: vproweb
+  ports:
+  - port: 80
+    targetPort: http
+    name: http
+  type: LoadBalancer
