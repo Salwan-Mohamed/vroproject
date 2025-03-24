@@ -8,38 +8,32 @@ spec:
   selector:
     matchLabels:
       app: vproapp
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 1
   template:
     metadata:
       labels:
         app: vproapp
     spec:
+      initContainers:
+      - name: wait-for-mysql
+        image: busybox:1.35
+        command: ['sh', '-c', 'until nc -z mysql-db-service 3306; do echo "waiting for mysql"; sleep 5; done;']
+      - name: wait-for-rabbitmq
+        image: busybox:1.35
+        command: ['sh', '-c', 'until nc -z rabbitmq-service 5672; do echo "waiting for rabbitmq"; sleep 5; done;']
+      - name: wait-for-memcached
+        image: busybox:1.35
+        command: ['sh', '-c', 'until nc -z vprocache-service 11211; do echo "waiting for memcached"; sleep 5; done;']
       containers:
       - name: vproapp
         image: salwansaied/vroproject:app
         ports:
         - containerPort: 8080
           name: app-port
-        resources:
-          requests:
-            memory: "512Mi"
-            cpu: "200m"
-          limits:
-            memory: "1024Mi"
-            cpu: "500m"
-        livenessProbe:
-          httpGet:
-            path: /
-            port: 8080
-          initialDelaySeconds: 30
-          periodSeconds: 10
-          timeoutSeconds: 5
-        readinessProbe:
-          httpGet:
-            path: /
-            port: 8080
-          initialDelaySeconds: 15
-          periodSeconds: 5
-          timeoutSeconds: 3
         env:
         - name: DB_USER
           valueFrom:
@@ -61,14 +55,31 @@ spec:
             secretKeyRef:
               name: rabbitmq-secrets
               key: rabbitmq-password
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "200m"
+          limits:
+            memory: "1024Mi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /login
+            port: 8080
+          initialDelaySeconds: 180
+          periodSeconds: 30
+          timeoutSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /login
+            port: 8080
+          initialDelaySeconds: 120
+          periodSeconds: 10
+          timeoutSeconds: 5
         volumeMounts:
         - name: app-config
           mountPath: /usr/local/tomcat/application.properties
           subPath: application.properties
-      initContainers:
-      - name: init-myservice
-        image: busybox:1.35
-        command: ['sh', '-c', 'echo "Waiting for MySQL, Memcached and RabbitMQ to be ready..."; sleep 60']
       volumes:
       - name: app-config
         configMap:
