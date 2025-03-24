@@ -1,56 +1,27 @@
-apiVersion: apps/v1
-kind: Deployment
+apiVersion: v1
+kind: ConfigMap
 metadata:
-  name: vprocache
-  namespace: vproproject
-spec:
-  replicas: 1
-  selector:
-    matchLabels:
-      app: vprocache
-  template:
-    metadata:
-      labels:
-        app: vprocache
-    spec:
-      containers:
-      - name: vprocache
-        image: salwansaied/vroproject:mc
-        ports:
-        - containerPort: 11211
-          name: memcache-port
-        resources:
-          requests:
-            memory: "128Mi"
-            cpu: "100m"
-          limits:
-            memory: "256Mi"
-            cpu: "200m"
-        livenessProbe:
-          tcpSocket:
-            port: 11211
-          initialDelaySeconds: 30
-          periodSeconds: 10
-          timeoutSeconds: 5
-        readinessProbe:
-          tcpSocket:
-            port: 11211
-          initialDelaySeconds: 15
-          periodSeconds: 5
-          timeoutSeconds: 3
-      initContainers:
-      - name: init-memcached
-        image: busybox:1.35
-        command: ['sh', '-c', 'echo "Waiting for resources to be ready..."; sleep 5']
+  namespace: metallb-system
+  name: config
+data:
+  config: |
+    address-pools:
+    - name: default
+      protocol: layer2
+      addresses:
+      - 10.1.5.81-10.1.5.199
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: vprocache-service
+  name: vproweb-lb
   namespace: vproproject
 spec:
   selector:
-    app: vprocache
+    app: vproweb
   ports:
-  - port: 11211
-    targetPort: memcache-port
+  - port: 80
+    targetPort: http
+    name: http
+  type: LoadBalancer
+  loadBalancerIP: 10.1.5.100
