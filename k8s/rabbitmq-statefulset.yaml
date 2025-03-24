@@ -1,27 +1,38 @@
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
-  name: vpromq
+  name: rabbitmq
   namespace: vproproject
 spec:
-  serviceName: vpromq-service
+  serviceName: rabbitmq-service
   replicas: 1
   selector:
     matchLabels:
-      app: vpromq
+      app: rabbitmq
   template:
     metadata:
       labels:
-        app: vpromq
+        app: rabbitmq
     spec:
       containers:
-      - name: vpromq
+      - name: rabbitmq
         image: salwansaied/vroproject:rmq
         ports:
         - containerPort: 5672
           name: rmq-port
         - containerPort: 15672
           name: rmq-mgmt-port
+        env:
+        - name: RABBITMQ_DEFAULT_USER
+          valueFrom:
+            secretKeyRef:
+              name: rabbitmq-secrets
+              key: rabbitmq-user
+        - name: RABBITMQ_DEFAULT_PASS
+          valueFrom:
+            secretKeyRef:
+              name: rabbitmq-secrets
+              key: rabbitmq-password
         resources:
           requests:
             memory: "256Mi"
@@ -30,31 +41,31 @@ spec:
             memory: "512Mi"
             cpu: "500m"
         livenessProbe:
-          exec:
-            command: ["rabbitmqctl", "status"]
-          initialDelaySeconds: 30
+          tcpSocket:
+            port: 5672
+          initialDelaySeconds: 120
+          periodSeconds: 20
+          timeoutSeconds: 10
+        readinessProbe:
+          tcpSocket:
+            port: 5672
+          initialDelaySeconds: 60
           periodSeconds: 10
           timeoutSeconds: 5
-        readinessProbe:
-          exec:
-            command: ["rabbitmqctl", "status"]
-          initialDelaySeconds: 10
-          periodSeconds: 5
-          timeoutSeconds: 5
         volumeMounts:
-        - name: vpromq-data
+        - name: rabbitmq-data
           mountPath: /var/lib/rabbitmq
         - name: rabbitmq-config
           mountPath: /etc/rabbitmq/rabbitmq.conf
           subPath: rabbitmq.conf
       initContainers:
-      - name: init-rmq
+      - name: init-rabbitmq
         image: busybox:1.35
         command: ['sh', '-c', 'echo "Waiting for resources to be ready..."; sleep 10']
       volumes:
-      - name: vpromq-data
+      - name: rabbitmq-data
         persistentVolumeClaim:
-          claimName: vpromq-pvc
+          claimName: rabbitmq-pvc
       - name: rabbitmq-config
         configMap:
           name: rabbitmq-config
@@ -62,11 +73,11 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: vpromq-service
+  name: rabbitmq-service
   namespace: vproproject
 spec:
   selector:
-    app: vpromq
+    app: rabbitmq
   ports:
   - port: 5672
     targetPort: rmq-port
@@ -75,3 +86,20 @@ spec:
     targetPort: rmq-mgmt-port
     name: rmq-mgmt-port
   clusterIP: None
+---
+# Regular service for backward compatibility
+apiVersion: v1
+kind: Service
+metadata:
+  name: vpromq-service
+  namespace: vproproject
+spec:
+  selector:
+    app: rabbitmq
+  ports:
+  - port: 5672
+    targetPort: rmq-port
+    name: rmq-port
+  - port: 15672
+    targetPort: rmq-mgmt-port
+    name: rmq-mgmt-port
