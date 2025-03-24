@@ -1,21 +1,21 @@
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
-  name: vprodb
+  name: mysql-db
   namespace: vproproject
 spec:
-  serviceName: vprodb-service
+  serviceName: mysql-db-service
   replicas: 1
   selector:
     matchLabels:
-      app: vprodb
+      app: mysql-db
   template:
     metadata:
       labels:
-        app: vprodb
+        app: mysql-db
     spec:
       containers:
-      - name: vprodb
+      - name: mysql
         image: salwansaied/vroproject:db
         ports:
         - containerPort: 3306
@@ -51,42 +51,61 @@ spec:
         livenessProbe:
           exec:
             command:
-            - bash
+            - sh
             - -c
-            - 'mysqladmin ping -u root -p${MYSQL_ROOT_PASSWORD}'
-          initialDelaySeconds: 30
-          periodSeconds: 10
-          timeoutSeconds: 5
+            - "mysqladmin ping -uroot -p\"${MYSQL_ROOT_PASSWORD}\""
+          initialDelaySeconds: 120
+          periodSeconds: 20
+          timeoutSeconds: 10
         readinessProbe:
           exec:
             command:
-            - bash
+            - sh
             - -c
-            - 'mysqladmin ping -u root -p${MYSQL_ROOT_PASSWORD}'
-          initialDelaySeconds: 5
-          periodSeconds: 5
-          timeoutSeconds: 1
+            - "mysqladmin ping -uroot -p\"${MYSQL_ROOT_PASSWORD}\""
+          initialDelaySeconds: 60
+          periodSeconds: 10
+          timeoutSeconds: 5
         volumeMounts:
-        - name: vprodb-data
+        - name: mysql-data
           mountPath: /var/lib/mysql
       initContainers:
-      - name: init-db
+      - name: init-mysql
         image: busybox:1.35
-        command: ['sh', '-c', 'echo "Waiting for MySQL to be ready..."; sleep 30']
+        command: ['sh', '-c', 'echo "Waiting for mysql volume to be ready..."; sleep 5']
       volumes:
-      - name: vprodb-data
+      - name: mysql-data
         persistentVolumeClaim:
-          claimName: vprodb-pvc
+          claimName: mysql-pvc
 ---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mysql-db-service
+  namespace: vproproject
+  labels:
+    app: mysql-db
+spec:
+  ports:
+  - port: 3306
+    targetPort: db-port
+    name: db-port
+  selector:
+    app: mysql-db
+  clusterIP: None
+---
+# Add a regular service for backward compatibility
 apiVersion: v1
 kind: Service
 metadata:
   name: vprodb-service
   namespace: vproproject
+  labels:
+    app: mysql-db
 spec:
-  selector:
-    app: vprodb
   ports:
   - port: 3306
     targetPort: db-port
-  clusterIP: None
+    name: db-port
+  selector:
+    app: mysql-db
