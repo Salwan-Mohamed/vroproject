@@ -1,0 +1,68 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vproweb
+  namespace: vproproject
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: vproweb
+  template:
+    metadata:
+      labels:
+        app: vproweb
+    spec:
+      containers:
+      - name: vproweb
+        image: salwansaied/vroproject:web
+        ports:
+        - containerPort: 80
+          name: http
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "256Mi"
+            cpu: "200m"
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 80
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          timeoutSeconds: 2
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 80
+          initialDelaySeconds: 5
+          periodSeconds: 3
+          timeoutSeconds: 2
+        volumeMounts:
+        - name: nginx-config
+          mountPath: /etc/nginx/conf.d/vproapp.conf
+          subPath: vproapp.conf
+      initContainers:
+      - name: init-nginx
+        image: busybox:1.35
+        command: ['sh', '-c', 'echo "Waiting for application to be ready..."; sleep 30']
+      volumes:
+      - name: nginx-config
+        configMap:
+          name: nginx-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: vproweb-service
+  namespace: vproproject
+spec:
+  selector:
+    app: vproweb
+  ports:
+  - port: 80
+    targetPort: http
+    name: http
+  type: ClusterIP
