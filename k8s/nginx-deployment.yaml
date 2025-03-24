@@ -30,24 +30,24 @@ spec:
           httpGet:
             path: /
             port: 80
-          initialDelaySeconds: 10
-          periodSeconds: 5
-          timeoutSeconds: 2
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
         readinessProbe:
           httpGet:
             path: /
             port: 80
-          initialDelaySeconds: 5
-          periodSeconds: 3
-          timeoutSeconds: 2
+          initialDelaySeconds: 15
+          periodSeconds: 5
+          timeoutSeconds: 3
         volumeMounts:
         - name: nginx-config
           mountPath: /etc/nginx/conf.d/vproapp.conf
           subPath: vproapp.conf
       initContainers:
-      - name: init-nginx
+      - name: wait-for-app
         image: busybox:1.35
-        command: ['sh', '-c', 'echo "Waiting for application to be ready..."; sleep 30']
+        command: ['sh', '-c', 'until nc -z vproapp-service 8080; do echo "waiting for app"; sleep 5; done;']
       volumes:
       - name: nginx-config
         configMap:
