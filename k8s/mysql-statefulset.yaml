@@ -1,0 +1,92 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: vprodb
+  namespace: vproproject
+spec:
+  serviceName: vprodb-service
+  replicas: 1
+  selector:
+    matchLabels:
+      app: vprodb
+  template:
+    metadata:
+      labels:
+        app: vprodb
+    spec:
+      containers:
+      - name: vprodb
+        image: salwansaied/vroproject:db
+        ports:
+        - containerPort: 3306
+          name: db-port
+        env:
+        - name: MYSQL_ROOT_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: db-secrets
+              key: root-password
+        - name: MYSQL_DATABASE
+          valueFrom:
+            secretKeyRef:
+              name: db-secrets
+              key: db-name
+        - name: MYSQL_USER
+          valueFrom:
+            secretKeyRef:
+              name: db-secrets
+              key: db-user
+        - name: MYSQL_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: db-secrets
+              key: db-password
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "100m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        livenessProbe:
+          exec:
+            command:
+            - bash
+            - -c
+            - 'mysqladmin ping -u root -p${MYSQL_ROOT_PASSWORD}'
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+        readinessProbe:
+          exec:
+            command:
+            - bash
+            - -c
+            - 'mysqladmin ping -u root -p${MYSQL_ROOT_PASSWORD}'
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          timeoutSeconds: 1
+        volumeMounts:
+        - name: vprodb-data
+          mountPath: /var/lib/mysql
+      initContainers:
+      - name: init-db
+        image: busybox:1.35
+        command: ['sh', '-c', 'echo "Waiting for MySQL to be ready..."; sleep 30']
+      volumes:
+      - name: vprodb-data
+        persistentVolumeClaim:
+          claimName: vprodb-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: vprodb-service
+  namespace: vproproject
+spec:
+  selector:
+    app: vprodb
+  ports:
+  - port: 3306
+    targetPort: db-port
+  clusterIP: None
