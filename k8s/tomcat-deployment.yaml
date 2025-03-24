@@ -1,0 +1,113 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vproapp
+  namespace: vproproject
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: vproapp
+  template:
+    metadata:
+      labels:
+        app: vproapp
+    spec:
+      containers:
+      - name: vproapp
+        image: salwansaied/vroproject:app
+        ports:
+        - containerPort: 8080
+          name: app-port
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "200m"
+          limits:
+            memory: "1024Mi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 8080
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 8080
+          initialDelaySeconds: 15
+          periodSeconds: 5
+          timeoutSeconds: 3
+        env:
+        - name: DB_USER
+          valueFrom:
+            secretKeyRef:
+              name: db-secrets
+              key: db-user
+        - name: DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: db-secrets
+              key: db-password
+        - name: RABBITMQ_USER
+          valueFrom:
+            secretKeyRef:
+              name: rabbitmq-secrets
+              key: rabbitmq-user
+        - name: RABBITMQ_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: rabbitmq-secrets
+              key: rabbitmq-password
+        volumeMounts:
+        - name: app-config
+          mountPath: /usr/local/tomcat/application.properties
+          subPath: application.properties
+      initContainers:
+      - name: init-myservice
+        image: busybox:1.35
+        command: ['sh', '-c', 'echo "Waiting for MySQL, Memcached and RabbitMQ to be ready..."; sleep 60']
+      volumes:
+      - name: app-config
+        configMap:
+          name: vproapp-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: vproapp-service
+  namespace: vproproject
+spec:
+  selector:
+    app: vproapp
+  ports:
+  - port: 8080
+    targetPort: app-port
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: vproapp-hpa
+  namespace: vproproject
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: vproapp
+  minReplicas: 3
+  maxReplicas: 10
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 70
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: Utilization
+        averageUtilization: 80
